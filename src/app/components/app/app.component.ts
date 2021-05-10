@@ -1,6 +1,7 @@
 import { Component } from '~/decorators/component';
 import { LogService } from '~/services/log';
 import { StoreService } from '~/services/store';
+import { Input } from '~/decorators/input';
 
 @Component({
   selector: 'app-root',

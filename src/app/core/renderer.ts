@@ -13,13 +13,35 @@
 import { Component, Type } from '~/decorators/component';
 import { Metadata } from '~/core/enums/metadata';
 import { injector } from '~/core/injector';
+import { eventManager } from '~/core/event-manager';
+import { EventMetadata } from '~/decorators/host-listener';
 
 export function render(constructors: Type<any>[]): void {
   constructors.forEach((constructor) => {
-    // const componentProps: PropsMetadata = constructor.prototype?.[Metadata.PropMetadata];
-    const instance = injector.getDependency(constructor);
-
     const componentOptions: Component = constructor.prototype?.[Metadata.Annotations];
+    const propMetadata = constructor.prototype?.[Metadata.PropMetadata];
+    const tags = document.getElementsByTagName(componentOptions.selector);
+    const instance = injector.getDependency(constructor);
+    let events = [];
+
+    if (propMetadata) {
+      events = Object.entries(propMetadata).map((value: [string, EventMetadata]) => {
+        const eventName = value[1] && Object.getOwnPropertyDescriptor(value[1], 'eventType') && value[0];
+        if (instance[eventName]) {
+          return {
+            eventName,
+            eventType: value[1].eventType,
+            cb: instance[eventName]
+          }
+        }
+      })
+    }
+
+    for (let event of events) {
+      if (event) {
+        eventManager.addListener(tags, event.eventType, event.cb);
+      }
+    }
 
     if (componentOptions && componentOptions.template) {
       const props = getPropsFromBrackets(componentOptions.template);
@@ -34,7 +56,6 @@ export function render(constructors: Type<any>[]): void {
       }
     }
 
-    const tags = document.getElementsByTagName(componentOptions.selector);
     Array.from(tags).forEach((tag) => {
       tag.innerHTML = componentOptions.template;
     });
